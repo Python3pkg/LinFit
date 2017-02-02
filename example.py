@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from linfit import LinFit
 
-#data = np.loadtxt("examples/data_det.txt")
-data = np.loadtxt("examples/data_upp.txt")
+data = np.loadtxt("examples/data_det.txt")
+#data = np.loadtxt("examples/data_upp.txt")
 x = data[:, 0]
 y = data[:, 1]
 xerr = data[:, 2]
