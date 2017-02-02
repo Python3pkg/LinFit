@@ -1,0 +1,8 @@
+#Python auxillary files
+*.pyc
+test_*.py
+
+#data files
+*.png
+*.pdf
+*.txt
