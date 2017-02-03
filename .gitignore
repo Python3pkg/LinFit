@@ -1,6 +1,7 @@
 #Python auxillary files
 *.pyc
 test_*.py
+dist/*
 
 #data files
 *.png
