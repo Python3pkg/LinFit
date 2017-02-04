@@ -1,4 +1,4 @@
-# linfit
+# linfit (under test)
 
 The linfit package is to perform the linear regression including the intrinsic scatter
 with the Markov chain Monte Carlo method. The [emcee](https://github.com/dfm/emcee)
