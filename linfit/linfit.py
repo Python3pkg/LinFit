@@ -1,244 +1,10 @@
 import emcee
 import corner
 import numpy as np
-from scipy.special import erf
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-
-def MockData(m, b, lnf=None, x=None, ndata=None, xep=[0.0, 0.0], yep=[0.0, 0.0]):
-    """
-    Generate the mock data.
-
-    Parameters
-    ----------
-    m : float
-        The slope.
-    b : float
-        The intercept.
-    lnf : float, optional
-        The intrinsic scatter. The default is None.
-    x : float array, optional
-        The x of the data. The default is None.
-    ndata : float, optional
-        If x is not provided, ndata should be given to provide the number of the
-        data randomly generated. The default is None.
-    xep : list
-        The lower and upper boundaries of the x error. The uncertainties are assumed
-        to be Gaussian. The default is [0.0, 0.0].
-    yep : list
-        The lower and upper boundaries of the y error. The uncertainties are assumed
-        to be Gaussian. The default is [0.0, 0.0].
-    """
-    if x is None:
-        assert not ndata is None
-        x = np.sort(10*np.random.rand(ndata))
-    else:
-        if (not ndata is None) & (ndata != len(x)):
-            raise Warning("[linfit]: The input ndata ({0}) is not used.".format(ndata))
-        ndata = len(x)
-    if lnf is None:
-        f = 0
-    else:
-        f = np.exp(lnf)
-    xerr = xep[0] + (xep[1] - xep[0]) * np.random.rand(ndata)
-    yerr = yep[0] + (yep[1] - yep[0]) * np.random.rand(ndata)
-    x += xerr * np.random.randn(ndata)
-    y = m * x + b
-    y += np.abs(f * y) * np.random.randn(ndata)
-    y += yerr * np.random.randn(ndata)
-    retDict = {
-        "x": x,
-        "y": y,
-        "xerr": xerr,
-        "yerr": yerr
-    }
-    return retDict
-
-def ChiSq(data, model, unct=None, flag=None, nsigma=3):
-    '''
-    This function calculate the Chi square of the observed data and
-    the model. The upper limits are properly deal with using the method
-    mentioned by Sawicki (2012).
-
-    Parameters
-    ----------
-    data : float array
-        The observed data and upperlimits.
-    model : float array
-        The model.
-    unct : float array or Nobe by default
-        The uncertainties.
-    flag : float array or None by default
-        The flag of upperlimits, 0 for detection and 1 for upperlimits.
-    nsigma : float; default: 3
-        The provided upperlimits are nsigma times of the uncertainties.
-
-    Returns
-    -------
-    chsq : float
-        The Chi square
-
-    Notes
-    -----
-    None.
-    '''
-    if unct is None:
-        unct = np.ones_like(data)
-    if flag is None:
-        flag = np.zeros_like(data)
-    fltr_dtc = flag == 0
-    fltr_non = flag == 1
-    if np.sum(fltr_dtc)>0:
-        wrsd_dtc = (data[fltr_dtc] - model[fltr_dtc])/unct[fltr_dtc] #The weighted residual
-        chsq_dtc = np.sum(wrsd_dtc**2) + np.sum( np.log(2 * np.pi * unct[fltr_dtc]**2.0) )
-    else:
-        chsq_dtc = 0.
-    if np.sum(fltr_non)>0:
-        unct_non = data[fltr_non]/nsigma #The nondetections are 3 sigma upper limits.
-        wrsd_non = (data[fltr_non] - model[fltr_non])/(unct_non * 2**0.5)
-        chsq_non = np.sum( -2.* np.log( 0.5 * (1 + erf(wrsd_non)) ) )
-    else:
-        chsq_non = 0.
-    chsq = chsq_dtc + chsq_non
-    return chsq
-
-def lnlike(theta, x, y, err, *args, **kwargs):
-    """
-    The ln of likelihood function for the general data. The y of the data could
-    be upperlimits.
-
-    Parameters
-    ----------
-    theta : list
-        The list of the model parameters, [m, b, lnf (optional)].
-    x : float array
-        The data of x.
-    y : float array
-        The data of y.
-    err : float array
-        The uncertainty of the data.
-    args and kwargs : for the ChiSq function.
-
-    Returns
-    -------
-    The ln likelihood.
-
-    Notes
-    -----
-    None.
-    """
-    if len(theta) == 2:
-        m, b = theta
-        model = m * x + b
-        s = err
-    if len(theta) == 3:
-        m, b, lnf = theta
-        model = m * x + b
-        s = (err**2 + model**2*np.exp(2*lnf))**0.5
-    lnL = -0.5 * ChiSq(y, model, s, *args, **kwargs)
-    return lnL
-
-def lnlike_simple(theta, x, y, err):
-    """
-    The ln of likelihood function using all detected data.
-
-    Parameters
-    ----------
-    theta : list
-        The list of the model parameters, [m, b, lnf (optional)].
-    x : float array
-        The data of x.
-    y : float array
-        The data of y.
-    err : float array
-        The uncertainty of the data.
-
-    Returns
-    -------
-    The ln likelihood.
-
-    Notes
-    -----
-    None.
-    """
-    if len(theta) == 2:
-        m, b = theta
-        model = m * x + b
-        inv_sigma2 = 1.0/err**2
-        return -0.5*(np.sum((y-model)**2*inv_sigma2 - np.log(inv_sigma2)))
-    if len(theta) == 3:
-        m, b, lnf = theta
-        model = m * x + b
-        inv_sigma2 = 1.0/(err**2 + model**2*np.exp(2*lnf))
-        return -0.5*(np.sum((y-model)**2*inv_sigma2 - np.log(inv_sigma2)))
-    else:
-        raise ValueError("[linfit]: The length of parameters ({0}) is incorrect!".format(len(theta)))
-
-def lnprior(theta, pRanges):
-    """
-    The ln of prior function.
-
-    Parameters
-    ----------
-    theta : list
-        The list of the model parameters, [m, b, lnf (optional)].
-    pRanges : list
-        The list of the parameter prior ranges.
-
-    Returns
-    -------
-    The ln prior.
-
-    Notes
-    -----
-    None.
-    """
-    assert len(theta) == len(pRanges)
-    if len(theta) == 2:
-        m, b = theta
-        mR, bR = pRanges
-        if mR[0] < m < mR[1] and bR[0] < b < bR[1]:
-            return 0.0
-        return -np.inf
-    if len(theta) == 3:
-        m, b, lnf = theta
-        mR, bR, lnfR = pRanges
-        if mR[0] < m < mR[1] and bR[0] < b < bR[1] and lnfR[0] < lnf < lnfR[1]:
-            return 0.0
-        return -np.inf
-    else:
-        raise ValueError("[linfit]: The length of parameters ({0}) is incorrect!".format(len(theta)))
-
-def lnprob(theta, x, y, err, pRanges, *args, **kwargs):
-    """
-    The ln of probability function.
-
-    Parameters
-    ----------
-    theta : list
-        The list of the model parameters, [m, b, lnf (optional)].
-    x : float array
-        The data of x.
-    y : float array
-        The data of y.
-    err : float array
-        The uncertainty of the data.
-    pRanges : list
-        The list of the parameter prior ranges.
-    args and kwargs : for the ChiSq function.
-
-    Returns
-    -------
-    The ln probability.
-
-    Notes
-    -----
-    None.
-    """
-    lp = lnprior(theta, pRanges)
-    if not np.isfinite(lp):
-        return -np.inf
-    return lp + lnlike(theta, x, y, err, *args, **kwargs)
+from .mock import *
+from .likelihoods import *
 
 def posRange(pRanges):
     """
@@ -312,7 +78,8 @@ class LinFit(object):
     The y of the data could be upperlimits. The upper limits are properly deal
     with using the method mentioned by Sawicki (2012).
     """
-    def __init__(self, x, y, pRanges, xerr=None, yerr=None, flag=None, nsigma=3):
+    def __init__(self, x, y, pRanges, xerr=None, yerr=None, flag=None, nsigma=3,
+                 lnlikeType="Nukers"):
         """
         To initiate the object.
 
@@ -345,8 +112,6 @@ class LinFit(object):
         """
         self.x = x
         self.y = y
-        self.xerr = xerr
-        self.yerr = yerr
         self.pRanges = pRanges
         self.flag = flag
         self.nsigma = nsigma
@@ -359,13 +124,68 @@ class LinFit(object):
             raise ValueError("[linfit]: The parameter number ({0}) is incorrect!".format(ndim))
         self.ndim = ndim
         if (xerr is None) & (yerr is None):
-            self.err = np.ones_like(x)
+            xerr = np.zeros_like(x)
+            yerr = np.ones_like(y)
         else:
             if xerr is None:
                 xerr = np.zeros_like(x)
             if yerr is None:
                 yerr = np.zeros_like(y)
-            self.err = (xerr**2. + yerr**2.)**0.5
+        self.xerr = xerr
+        self.yerr = yerr
+        if lnlikeType == "Nukers":
+            self.lnlike = lnlike_Nukers
+            self.parNames = ["beta", "alpha", "epsy0"]
+        elif lnlikeType == "gcs":
+            self.lnlike = lnlike_gcs
+            self.parNames = ["m", "b", "lnf"]
+        elif lnlikeType == "naive":
+            self.lnlike = lnlike_naive
+            self.parNames = ["m", "b", "lnf"]
+        elif lnlikeType == "perp":
+            self.lnlike = lnlike_perp
+            self.parNames = ["theta", "bv", "V"]
+        elif lnlikeType == "perp2":
+            self.lnlike = lnlike_perp2
+            self.parNames = ["theta", "b", "V"]
+        else:
+            raise ValueError("[linfit]: The lnlike function ({0}) is not recognised!".format(lnlike))
+        self.lnlikeType = lnlikeType
+
+    def lnprob(self, theta, x, y, xerr, yerr, pRanges, *args, **kwargs):
+        """
+        The ln of probability function.
+
+        Parameters
+        ----------
+        lnlike : function
+            The lnlike function
+        theta : list
+            The list of the model parameters, [m, b, lnf (optional)].
+        x : float array
+            The data of x.
+        y : float array
+            The data of y.
+        xerr : float array
+            The uncertainty of the x data.
+        yerr : float array
+            The uncertainty of the y data.
+        pRanges : list
+            The list of the parameter prior ranges.
+        args and kwargs : for the ChiSq function.
+
+        Returns
+        -------
+        The ln probability.
+
+        Notes
+        -----
+        None.
+        """
+        lp = lnprior(theta, pRanges)
+        if not np.isfinite(lp):
+            return -np.inf
+        return lp + self.lnlike(theta, x, y, xerr, yerr, *args, **kwargs)
 
     def EnsembleSampler(self, nwalkers, **kwargs):
         """
@@ -373,9 +193,13 @@ class LinFit(object):
         """
         self.nwalkers = nwalkers
         self.__sampler = "EnsembleSampler"
-        self.sampler = emcee.EnsembleSampler(nwalkers, self.ndim, lnprob,
-                       args=(self.x, self.y, self.err, self.pRanges, self.flag, self.nsigma),
-                       **kwargs)
+        if self.lnlikeType == "gcs":
+            logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges,
+                    self.flag, self.nsigma)
+        else:
+            logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges)
+        self.sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.lnprob,
+                       args=logpargs, **kwargs)
         print("[linfit]: Use the EnsembleSampler.")
         return self.sampler
 
@@ -383,10 +207,13 @@ class LinFit(object):
         self.ntemps = ntemps
         self.nwalkers = nwalkers
         self.__sampler = "PTSampler"
+        if self.lnlikeType == "gcs":
+            loglargs = (self.x, self.y, self.xerr, self.yerr, self.flag, self.nsigma)
+        else:
+            loglargs = (self.x, self.y, self.xerr, self.yerr)
         self.sampler = emcee.PTSampler(ntemps, nwalkers, self.ndim,
-                       logl=lnlike, logp=lnprior,
-                       loglargs=[self.x, self.y, self.err, self.flag, self.nsigma],
-                       logpargs=[self.pRanges], **kwargs)
+                       logl=self.lnlike, logp=lnprior,
+                       loglargs=loglargs, logpargs=[self.pRanges], **kwargs)
         print("[linfit]: Use the PTSampler.")
         return self.sampler
 
@@ -547,34 +374,66 @@ class LinFit(object):
         return samples
 
     def get_BestFit(self, burnin=0):
-        parNames = ["m", "b", "lnf"]
+        parNames = self.parNames
         ndim = self.ndim
         samples = self.posterior_sample(burnin)
+        lnlikeType = self.lnlikeType
         BFDict = {
+            "Parameters": parNames,
             "samples": samples
         }
-        if ndim == 2:
-            m_mcmc, b_mcmc = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
-                                     zip(*np.percentile(samples, [16, 50, 84],
-                                                        axis=0)))
-            BFDict["m"] = m_mcmc
-            BFDict["b"] = b_mcmc
-            BFDict["lnf"] = None
-        elif ndim == 3:
-            m_mcmc, b_mcmc, lnf_mcmc = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
-                                     zip(*np.percentile(samples, [16, 50, 84],
-                                                        axis=0)))
-            BFDict["m"] = m_mcmc
-            BFDict["b"] = b_mcmc
-            BFDict["lnf"] = lnf_mcmc
+        bfList = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
+                     zip(*np.percentile(samples, [16, 50, 84], axis=0)))
+        fmerge = lambda v: (v[0]-v[2], v[0], v[0]+v[1])
+        fdiff  = lambda v: (v[1], v[2]-v[1], v[1]-v[0])
+        for loop in range(ndim):
+            pn = parNames[loop]
+            BFDict[pn] = bfList[loop]
+        if lnlikeType == "naive" or lnlikeType == "gcs":
+            BFDict["slope"] = BFDict["m"]
+            BFDict["intercept"] = BFDict["b"]
+            lnf = fmerge(BFDict["lnf"])
+            BFDict["IntSc"] = fdiff(np.exp(lnf))
+        elif lnlikeType == "Nukers":
+            BFDict["slope"] = BFDict["beta"]
+            BFDict["intercept"] = BFDict["alpha"]
+            BFDict["IntSc"] = BFDict["epsy0"]
+        elif lnlikeType == "perp":
+            t = fmerge(BFDict["theta"])
+            BFDict["slope"] = fdiff(np.tan(t))
+            bv = fmerge(BFDict["bv"])
+            BFDict["intercept"] = fdiff(bv / np.cos(t))
+            V = fmerge(BFDict["V"])
+            BFDict["IntSc"] = fdiff(np.sqrt(V) / np.cos(t))
+        elif lnlikeType == "perp2":
+            t = fmerge(BFDict["theta"])
+            BFDict["slope"] = fdiff(np.tan(t))
+            BFDict["intercept"] = BFDict["b"]
+            V = fmerge(BFDict["V"])
+            BFDict["IntSc"] = fdiff(np.sqrt(V) / np.cos(t))
         return BFDict
 
-    def plot_BestFit(self, burnin=0):
+    def get_lnprob(self, theta):
+        if self.lnlikeType == "gcs":
+            logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges,
+                    self.flag, self.nsigma)
+        else:
+            logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges)
+        lnP = self.lnprob(theta, *logpargs)
+        return lnP
+
+    def get_BFProb(self, burnin=0):
+        sampler = self.__sampler
         BFDict = self.get_BestFit(burnin)
-        samples = BFDict["samples"]
-        m_mcmc  = BFDict["m"]
-        b_mcmc  = BFDict["b"]
-        lnf_mcmc  = BFDict["lnf"]
+        parNames = self.parNames
+        theta = []
+        for pn in parNames:
+            theta.append(BFDict[pn][0])
+        lnP = self.get_lnprob(theta)
+        return lnP
+
+    def plot_BestFit(self, burnin=0):
+        #Plot the data
         fig = plt.figure()
         x = self.x
         y = self.y
@@ -593,9 +452,13 @@ class LinFit(object):
                          fmt=".k")
         ax = plt.gca()
         ax.tick_params(axis='both', labelsize=20)
-        m_bf = m_mcmc[0]
-        b_bf = b_mcmc[0]
         xl = np.array(ax.get_xlim())
+        #Plot the best fit
+        BFDict = self.get_BestFit(burnin)
+        m_fit = BFDict["slope"]
+        b_fit = BFDict["intercept"]
+        m_bf = m_fit[0]
+        b_bf = b_fit[0]
         yl = m_bf * xl + b_bf
         plt.plot(xl, yl, color="k", linestyle="--", label="Best Fit")
         return (fig, ax)
@@ -603,7 +466,8 @@ class LinFit(object):
     def plot_corner(self, burnin=0):
         BFDict = self.get_BestFit(burnin)
         samples = BFDict["samples"]
-        fig = corner.corner(samples, quantiles=[0.16, 0.5, 0.84], show_titles=True,
+        fig = corner.corner(samples, labels=self.parNames,
+                            quantiles=[0.16, 0.5, 0.84], show_titles=True,
                             title_kwargs={"fontsize": 12})
         ax = plt.gca()
         return (fig, ax)
@@ -612,23 +476,22 @@ class LinFit(object):
         ndim = self.ndim
         samplerType = self.__sampler
         sampler = self.sampler
+        parNames = self.parNames
         if samplerType == "EnsembleSampler":
             chain  = self.sampler.chain
         elif samplerType == "PTSampler":
             chain  = self.sampler.chain[0, ...]
-        else:
-            raise ValueError("[linfit]: The sampler type ({0}) is unrecognised!".format(sampler))
         fig, axes = plt.subplots(ndim, 1, sharex=True, figsize=(8, 9))
         axes[0].plot(chain[:, :, 0].T, color="k", alpha=0.4)
         axes[0].yaxis.set_major_locator(MaxNLocator(5))
-        axes[0].set_ylabel("$m$", fontsize=24)
+        axes[0].set_ylabel(parNames[0], fontsize=24)
         axes[1].plot(chain[:, :, 1].T, color="k", alpha=0.4)
         axes[1].yaxis.set_major_locator(MaxNLocator(5))
-        axes[1].set_ylabel("$b$", fontsize=24)
+        axes[1].set_ylabel(parNames[1], fontsize=24)
         if ndim == 3:
             axes[2].plot(chain[:, :, 2].T, color="k", alpha=0.4)
             axes[2].yaxis.set_major_locator(MaxNLocator(5))
-            axes[2].set_ylabel("$\mathrm{ln}\,f$", fontsize=24)
+            axes[2].set_ylabel(parNames[2], fontsize=24)
             axes[2].set_xlabel("step number", fontsize=24)
         fig.tight_layout(h_pad=0.0)
         return (fig, axes)
