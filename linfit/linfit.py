@@ -460,7 +460,7 @@ class LinFit(object):
         m_bf = m_fit[0]
         b_bf = b_fit[0]
         yl = m_bf * xl + b_bf
-        plt.plot(xl, yl, color="k", linestyle="--", label="Best Fit")
+        plt.plot(xl, yl, color="k", linestyle="--", label="{0}".format("Best Fit"))
         return (fig, ax)
 
     def plot_corner(self, burnin=0):

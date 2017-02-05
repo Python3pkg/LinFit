@@ -1,6 +1,7 @@
 #Python auxillary files
 *.pyc
 test_*.py
+check_*.py
 dist/*
 
 #data files
