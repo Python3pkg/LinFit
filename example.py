@@ -7,6 +7,9 @@ data = np.loadtxt("examples/data_V.txt")
 #data = np.loadtxt("examples/data_sigy.txt")
 #data = np.loadtxt("examples/data_det.txt")
 #data = np.loadtxt("examples/data_upp.txt")
+m_true = -0.9594
+b_true = 4.294
+
 x = data[:, 0]
 y = data[:, 1]
 xerr = data[:, 2]
@@ -17,7 +20,7 @@ fig = plt.figure()
 plt.errorbar(x, y, xerr=xerr, yerr=yerr, linestyle="none", marker=".", color="k")
 ax = plt.gca()
 xl = np.array(ax.get_xlim())
-yl = np.tan(-0.757) * xl + 4.294
+yl = m_true * xl + b_true
 ax.plot(xl, yl, linestyle="-", color="k", label="{0}".format("Input"))
 
 #-->Fit

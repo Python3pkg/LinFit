@@ -2,6 +2,11 @@
 setup.cfg
 setup.py
 linfit/__init__.py
+linfit/likelihoods.py
 linfit/linfit.py
-test/test_data.py
+linfit/mock.py
+test/test_data_V.py
+test/test_data_lnf.py
+test/test_data_sigy.py
 test/test_fit.py
+test/test_rot.py
