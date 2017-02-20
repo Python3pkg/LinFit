@@ -78,8 +78,7 @@ class LinFit(object):
     The y of the data could be upperlimits. The upper limits are properly deal
     with using the method mentioned by Sawicki (2012).
     """
-    def __init__(self, x, y, pRanges, xerr=None, yerr=None, flag=None, nsigma=3,
-                 lnlikeType="Nukers"):
+    def __init__(self, x, y, pRanges, xerr=None, yerr=None, flag=None, lnlikeType="Nukers"):
         """
         To initiate the object.
 
@@ -103,8 +102,6 @@ class LinFit(object):
         flag : float array
             The upperlimit flag of the y data; 0 for the detection and 1 for the
             upperlimit.
-        nsigma : float
-            The upperlimits are nsigma times of the uncertainties, respectively.
 
         Notes
         -----
@@ -114,7 +111,6 @@ class LinFit(object):
         self.y = y
         self.pRanges = pRanges
         self.flag = flag
-        self.nsigma = nsigma
         ndim = len(pRanges)
         if ndim == 2:
             print("[linfit]: The model uncertainty is NOT considered!")
@@ -195,7 +191,7 @@ class LinFit(object):
         self.__sampler = "EnsembleSampler"
         if self.lnlikeType == "gcs":
             logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges,
-                    self.flag, self.nsigma)
+                    self.flag)
         else:
             logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges)
         self.sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.lnprob,
@@ -208,7 +204,7 @@ class LinFit(object):
         self.nwalkers = nwalkers
         self.__sampler = "PTSampler"
         if self.lnlikeType == "gcs":
-            loglargs = (self.x, self.y, self.xerr, self.yerr, self.flag, self.nsigma)
+            loglargs = (self.x, self.y, self.xerr, self.yerr, self.flag)
         else:
             loglargs = (self.x, self.y, self.xerr, self.yerr)
         self.sampler = emcee.PTSampler(ntemps, nwalkers, self.ndim,
@@ -416,7 +412,7 @@ class LinFit(object):
     def get_lnprob(self, theta):
         if self.lnlikeType == "gcs":
             logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges,
-                    self.flag, self.nsigma)
+                    self.flag)
         else:
             logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges)
         lnP = self.lnprob(theta, *logpargs)

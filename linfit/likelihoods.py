@@ -3,8 +3,15 @@ from scipy.special import erf
 
 #--> The lnlikes
 #-> The lnlike calculated with generalized chi square
-#The generalized chi-square function
-def ChiSq_0(data, model, unct=None, flag=None, nsigma=3):
+#------------------------------------------------------------------------------#
+# Note:
+# When I compare the two different methods to compare the upperlimits, the
+# results are surprisingly consistent with each other. Both of them could
+# obtain the reasonable posterier probability distribution and I cannot tell
+# which one is better than the other.
+#------------------------------------------------------------------------------#
+#The generalized chi-square function with Sawicki (2012)'s method.
+def ChiSq_0(data, model, unct=None, flag=None):
     '''
     This is a generalized chi-square function that allows y to be upperlimits. The
     upper limits are properly deal with using the method mentioned by Sawicki (2012).
@@ -19,8 +26,6 @@ def ChiSq_0(data, model, unct=None, flag=None, nsigma=3):
         The uncertainties.
     flag : float array or None by default
         The flag of upperlimits, 0 for detection and 1 for upperlimits.
-    nsigma : float; default: 3
-        The provided upperlimits are nsigma times of the uncertainties.
 
     Returns
     -------
@@ -44,7 +49,7 @@ def ChiSq_0(data, model, unct=None, flag=None, nsigma=3):
     else:
         chsq_dtc = 0.
     if np.sum(fltr_non)>0:
-        unct_non = data[fltr_non]/nsigma #The nondetections are 3 sigma upper limits.
+        unct_non = unct[fltr_non]
         wrsd_non = (data[fltr_non] - model[fltr_non])/(unct_non * 2**0.5)
         chsq_non = np.sum( -2.* np.log( 0.5 * (1 + erf(wrsd_non)) ) )
     else:
@@ -52,8 +57,8 @@ def ChiSq_0(data, model, unct=None, flag=None, nsigma=3):
     chsq = chsq_dtc + chsq_non
     return chsq
 
-#->The generalized chi-square function
-def ChiSq_1(data, model, unct=None, flag=None, nsigma=3):
+#The generalized chi-square function with simple Gaussian method.
+def ChiSq_1(data, model, unct=None, flag=None):
     '''
     This is a generalized chi-square function that allows y to be upperlimits.
     It contributes zero to the chi square that the model is below the upperlimits,
@@ -70,8 +75,6 @@ def ChiSq_1(data, model, unct=None, flag=None, nsigma=3):
         The uncertainties.
     flag : float array or None by default
         The flag of upperlimits, 0 for detection and 1 for upperlimits.
-    nsigma : float; default: 3
-        The provided upperlimits are nsigma times of the uncertainties.
 
     Returns
     -------
@@ -97,7 +100,7 @@ def ChiSq_1(data, model, unct=None, flag=None, nsigma=3):
     if np.sum(fltr_non)>0:
         data_non  = data[fltr_non]
         model_non = model[fltr_non]
-        unct_non  = data_non/nsigma #The nondetections are 3 sigma upper limits.
+        unct_non  = unct[fltr_non]
         wrsd_non  = np.zeros_like(data_non)
         #Only the when the model is above the upperlimit, it contributes to the chi square.
         fltr =  model_non > data_non
