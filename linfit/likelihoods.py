@@ -4,7 +4,7 @@ from scipy.special import erf
 #--> The lnlikes
 #-> The lnlike calculated with generalized chi square
 #The generalized chi-square function
-def ChiSq(data, model, unct=None, flag=None, nsigma=3):
+def ChiSq_0(data, model, unct=None, flag=None, nsigma=3):
     '''
     This is a generalized chi-square function that allows y to be upperlimits. The
     upper limits are properly deal with using the method mentioned by Sawicki (2012).
@@ -52,6 +52,62 @@ def ChiSq(data, model, unct=None, flag=None, nsigma=3):
     chsq = chsq_dtc + chsq_non
     return chsq
 
+#->The generalized chi-square function
+def ChiSq_1(data, model, unct=None, flag=None, nsigma=3):
+    '''
+    This is a generalized chi-square function that allows y to be upperlimits.
+    It contributes zero to the chi square that the model is below the upperlimits,
+    while it contributes as the normal detected points whtn the model is above
+    the upperlimits.
+
+    Parameters
+    ----------
+    data : float array
+        The observed data and upperlimits.
+    model : float array
+        The model.
+    unct : float array or Nobe by default
+        The uncertainties.
+    flag : float array or None by default
+        The flag of upperlimits, 0 for detection and 1 for upperlimits.
+    nsigma : float; default: 3
+        The provided upperlimits are nsigma times of the uncertainties.
+
+    Returns
+    -------
+    chsq : float
+        The Chi square
+
+    Notes
+    -----
+    This chi-square form consider the x and y asymmetrically except for some special
+    situations.
+    '''
+    if unct is None:
+        unct = np.ones_like(data)
+    if flag is None:
+        flag = np.zeros_like(data)
+    fltr_dtc = flag == 0
+    fltr_non = flag == 1
+    if np.sum(fltr_dtc)>0:
+        wrsd_dtc = (data[fltr_dtc] - model[fltr_dtc])/unct[fltr_dtc] #The weighted residual
+        chsq_dtc = np.sum(wrsd_dtc**2) + np.sum( np.log(2 * np.pi * unct[fltr_dtc]**2) )
+    else:
+        chsq_dtc = 0.
+    if np.sum(fltr_non)>0:
+        data_non  = data[fltr_non]
+        model_non = model[fltr_non]
+        unct_non  = data_non/nsigma #The nondetections are 3 sigma upper limits.
+        wrsd_non  = np.zeros_like(data_non)
+        #Only the when the model is above the upperlimit, it contributes to the chi square.
+        fltr =  model_non > data_non
+        wrsd_non[fltr] = (model_non[fltr] - data_non[fltr]) / unct_non[fltr]
+        chsq_non = np.sum(wrsd_non**2) + np.sum( np.log(2 * np.pi * unct_non**2) )
+    else:
+        chsq_non = 0.
+    chsq = chsq_dtc + chsq_non
+    return chsq
+
 def lnlike_gcs(theta, x, y, xerr, yerr, *args, **kwargs):
     """
     The ln of likelihood function use the generalized chi-square function. The y
@@ -87,7 +143,7 @@ def lnlike_gcs(theta, x, y, xerr, yerr, *args, **kwargs):
         m, b, lnf = theta
         model = m * x + b
         s = np.sqrt(yerr**2 + (m*xerr)**2 + model**2*np.exp(2*lnf))
-    lnL = -0.5 * ChiSq(y, model, s, *args, **kwargs)
+    lnL = -0.5 * ChiSq_1(y, model, s, *args, **kwargs)
     return lnL
 
 #-> The Nukers' lnlike
@@ -324,3 +380,18 @@ def lnprob(theta, x, y, xerr, yerr, pRanges, *args, **kwargs):
     if not np.isfinite(lp):
         return -np.inf
     return lp + lnlike(theta, x, y, xerr, yerr, *args, **kwargs)
+
+if __name__ == "__main__":
+    m_true = -0.9594
+    b_true = 4.294
+    data = np.loadtxt("examples/data_lnf.txt")
+    #data = np.loadtxt("examples/data_upp.txt")
+    x = data[:, 0]
+    y = data[:, 1]
+    xerr = data[:, 2]
+    yerr = data[:, 3]
+    flag = data[:, 4]
+    model = m_true * x + b_true
+    sigma = np.sqrt(yerr**2 + (m_true * xerr)**2)
+    print ChiSq_0(y, model, sigma, flag)
+    print ChiSq_1(y, model, sigma, flag)
