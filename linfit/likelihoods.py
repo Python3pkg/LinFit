@@ -111,7 +111,7 @@ def ChiSq_1(data, model, unct=None, flag=None):
     chsq = chsq_dtc + chsq_non
     return chsq
 
-def lnlike_gcs(theta, x, y, xerr, yerr, *args, **kwargs):
+def lnlike_gcs(theta, x, y, xerr, yerr, fix_m=None, fix_b=None, *args, **kwargs):
     """
     The ln of likelihood function use the generalized chi-square function. The y
     of the data could be upperlimits.
@@ -128,6 +128,10 @@ def lnlike_gcs(theta, x, y, xerr, yerr, *args, **kwargs):
         The uncertainty of the x data.
     yerr : float array
         The uncertainty of the y data.
+    fix_m : (Optional) float
+        Fix the value of m into the given value.
+    fix_b : (Optional) float
+        Fix the value of b into the given value.
     args and kwargs : for the ChiSq function.
 
     Returns
@@ -136,17 +140,50 @@ def lnlike_gcs(theta, x, y, xerr, yerr, *args, **kwargs):
 
     Notes
     -----
-    None.
+    The lnf here we use mainly as the epsy0 of Nukers method instead of the
+    fraction of model uncertainty. With this treatment, the best-fit result is
+    close to the Nukers result and we can deal with the upperlimits with this
+    function.
     """
-    if len(theta) == 2:
-        m, b = theta
+    lenPar = len(theta)
+    parDict = {}
+    nFix = 0
+    if not fix_m is None:
+        parDict["m"] = fix_m
+        nFix += 1
+    if not fix_b is None:
+        parDict["b"] = fix_b
+        nFix += 1
+    fixList = parDict.keys()
+    nUse = 0
+    if (lenPar + nFix) == 2:
+        if "m" in fixList:
+            m = parDict["m"]
+        else:
+            m = theta[nUse]
+            nUse += 1
+        if "b" in fixList:
+            b = parDict["b"]
+        else:
+            b = theta[nUse]
         model = m * x + b
         s = np.sqrt(yerr**2 + (m*xerr)**2)
-    if len(theta) == 3:
-        m, b, lnf = theta
+    elif (lenPar + nFix) == 3:
+        if "m" in fixList:
+            m = parDict["m"]
+        else:
+            m = theta[nUse]
+            nUse += 1
+        if "b" in fixList:
+            b = parDict["b"]
+        else:
+            b = theta[nUse]
+            nUse += 1
         model = m * x + b
-        s = np.sqrt(yerr**2 + (m*xerr)**2 + model**2*np.exp(2*lnf))
-    lnL = -0.5 * ChiSq_1(y, model, s, *args, **kwargs)
+        lnf = theta[nUse]
+        #s = np.sqrt(yerr**2 + (m*xerr)**2 + model**2*np.exp(2*lnf))
+        s = np.sqrt(yerr**2 + (m*xerr)**2 + lnf**2)
+    lnL = -0.5 * ChiSq_0(y, model, s, *args, **kwargs)
     return lnL
 
 #-> The Nukers' lnlike
@@ -379,6 +416,8 @@ def lnprob(theta, x, y, xerr, yerr, pRanges, *args, **kwargs):
     -----
     None.
     """
+    print "args", args
+    print "kwargs", kwargs
     lp = lnprior(theta, pRanges)
     if not np.isfinite(lp):
         return -np.inf

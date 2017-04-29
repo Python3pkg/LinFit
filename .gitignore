@@ -3,6 +3,7 @@
 test_*.py
 check_*.py
 dist/*
+bak_*
 
 #data files
 *.png

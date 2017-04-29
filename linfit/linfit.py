@@ -78,7 +78,8 @@ class LinFit(object):
     The y of the data could be upperlimits. The upper limits are properly deal
     with using the method mentioned by Sawicki (2012).
     """
-    def __init__(self, x, y, pRanges, xerr=None, yerr=None, flag=None, lnlikeType="Nukers"):
+    def __init__(self, x, y, pRanges, xerr=None, yerr=None, flag=None, lnlikeType="Nukers",
+                 fix_slope=None, fix_intercept=None):
         """
         To initiate the object.
 
@@ -111,10 +112,19 @@ class LinFit(object):
         self.y = y
         self.pRanges = pRanges
         self.flag = flag
+        self.xerr = xerr
+        self.yerr = yerr
+        self.fix_slope = fix_slope
+        self.fix_intercept = fix_intercept
+        nfix = 0
+        if not fix_slope is None:
+            nfix += 1
+        if not fix_intercept is None:
+            nfix += 1
         ndim = len(pRanges)
-        if ndim == 2:
+        if (ndim + nfix) == 2:
             print("[linfit]: The model uncertainty is NOT considered!")
-        elif ndim == 3:
+        elif (ndim + nfix) == 3:
             print("[linfit]: The model uncertainty is considered!")
         else:
             raise ValueError("[linfit]: The parameter number ({0}) is incorrect!".format(ndim))
@@ -127,14 +137,17 @@ class LinFit(object):
                 xerr = np.zeros_like(x)
             if yerr is None:
                 yerr = np.zeros_like(y)
-        self.xerr = xerr
-        self.yerr = yerr
         if lnlikeType == "Nukers":
             self.lnlike = lnlike_Nukers
             self.parNames = ["beta", "alpha", "epsy0"]
         elif lnlikeType == "gcs":
             self.lnlike = lnlike_gcs
-            self.parNames = ["m", "b", "lnf"]
+            self.parNames = []
+            if fix_slope is None:
+                self.parNames.append("m")
+            if fix_intercept is None:
+                self.parNames.append("b")
+            self.parNames.append("lnf")
         elif lnlikeType == "naive":
             self.lnlike = lnlike_naive
             self.parNames = ["m", "b", "lnf"]
@@ -190,12 +203,17 @@ class LinFit(object):
         self.nwalkers = nwalkers
         self.__sampler = "EnsembleSampler"
         if self.lnlikeType == "gcs":
-            logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges,
-                    self.flag)
+            logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges)
+            logpkwargs = {
+                "flag": self.flag,
+                "fix_m": self.fix_slope,
+                "fix_b": self.fix_intercept,
+            }
         else:
             logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges)
+            logpkwargs = {}
         self.sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.lnprob,
-                       args=logpargs, **kwargs)
+                       args=logpargs, kwargs=logpkwargs, **kwargs)
         print("[linfit]: Use the EnsembleSampler.")
         return self.sampler
 
@@ -385,11 +403,21 @@ class LinFit(object):
         for loop in range(ndim):
             pn = parNames[loop]
             BFDict[pn] = bfList[loop]
-        if lnlikeType == "naive" or lnlikeType == "gcs":
+        if lnlikeType == "naive":
             BFDict["slope"] = BFDict["m"]
             BFDict["intercept"] = BFDict["b"]
             lnf = fmerge(BFDict["lnf"])
             BFDict["IntSc"] = fdiff(np.exp(lnf))
+        elif lnlikeType == "gcs":
+            if self.fix_slope is None:
+                BFDict["slope"] = BFDict["m"]
+            else:
+                BFDict["slope"] = [self.fix_slope, 0, 0]
+            if self.fix_intercept is None:
+                BFDict["intercept"] = BFDict["b"]
+            else:
+                BFDict["intercept"] = [self.fix_intercept, 0, 0]
+            BFDict["IntSc"] = BFDict["lnf"]
         elif lnlikeType == "Nukers":
             BFDict["slope"] = BFDict["beta"]
             BFDict["intercept"] = BFDict["alpha"]
@@ -411,11 +439,16 @@ class LinFit(object):
 
     def get_lnprob(self, theta):
         if self.lnlikeType == "gcs":
-            logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges,
-                    self.flag)
+            logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges)
+            logpkwargs = {
+                "flag": self.flag,
+                "fix_m": None,
+                "fix_b": None
+            }
         else:
             logpargs = (self.x, self.y, self.xerr, self.yerr, self.pRanges)
-        lnP = self.lnprob(theta, *logpargs)
+            logpkwargs = {}
+        lnP = self.lnprob(theta, *logpargs, **logpkwargs)
         return lnP
 
     def get_BFProb(self, burnin=0):

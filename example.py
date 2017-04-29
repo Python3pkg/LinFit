@@ -17,7 +17,7 @@ yerr = data[:, 3]
 flag = data[:, 4]
 
 fig = plt.figure()
-plt.errorbar(x, y, xerr=xerr, yerr=yerr, linestyle="none", marker=".", color="k")
+plt.errorbar(x, y, xerr=xerr, yerr=yerr, uplims=flag ,linestyle="none", marker=".", color="k")
 ax = plt.gca()
 xl = np.array(ax.get_xlim())
 yl = m_true * xl + b_true
@@ -48,8 +48,9 @@ lf.reset()
 
 #gcs lnlike
 lnlikeType = "gcs"
-pRanges = [[-10, 10], [-10, 10], [-10, 10]] #gcs
-lf = LinFit(x, y, pRanges, xerr=xerr, yerr=yerr, flag=flag, lnlikeType=lnlikeType)
+pRanges = [[-10, 10], [-10, 10], [0, 10]] #gcs
+#pRanges = [[-10, 10], [0, 10]] #gcs
+lf = LinFit(x, y, pRanges, xerr=xerr, yerr=yerr, flag=flag, lnlikeType=lnlikeType, fix_intercept=None)
 lf.EnsembleSampler(nwalkers=100)
 print("Start fitting!")
 lf.fit(nrun=1000, nburnin=500, psigma=0.01)
@@ -89,6 +90,7 @@ b = BFDict["intercept"][0]
 yl = m * xl + b
 ax.plot(xl, yl, linestyle="--", label="{0}".format(lnlikeType))
 lf.reset()
+
 plt.legend(fontsize="18")
 plt.xlabel("x", fontsize=24)
 plt.ylabel("y", fontsize=24)
