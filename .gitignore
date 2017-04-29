@@ -9,3 +9,6 @@ bak_*
 *.png
 *.pdf
 *.txt
+
+#PyPI
+MANIFEST
