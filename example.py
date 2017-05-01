@@ -48,7 +48,7 @@ lf.reset()
 
 #gcs lnlike
 lnlikeType = "gcs"
-pRanges = [[-10, 10], [-10, 10], [0, 10]] #gcs
+pRanges = [[-10, 10], [-10, 10], [-10, 10]] #gcs
 #pRanges = [[-10, 10], [0, 10]] #gcs
 lf = LinFit(x, y, pRanges, xerr=xerr, yerr=yerr, flag=flag, lnlikeType=lnlikeType, fix_intercept=None)
 lf.EnsembleSampler(nwalkers=100)

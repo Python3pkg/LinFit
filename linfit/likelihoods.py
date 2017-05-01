@@ -182,7 +182,7 @@ def lnlike_gcs(theta, x, y, xerr, yerr, fix_m=None, fix_b=None, *args, **kwargs)
         model = m * x + b
         lnf = theta[nUse]
         #s = np.sqrt(yerr**2 + (m*xerr)**2 + model**2*np.exp(2*lnf))
-        s = np.sqrt(yerr**2 + (m*xerr)**2 + lnf**2)
+        s = np.sqrt(yerr**2 + (m*xerr)**2 + np.exp(2*lnf))
     lnL = -0.5 * ChiSq_0(y, model, s, *args, **kwargs)
     return lnL
 
