@@ -1,3 +1,3 @@
 from .linfit import *
 
-print "This is the developing code!"
+print("This is the developing code!")

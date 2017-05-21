@@ -35,11 +35,11 @@ print("Finish fitting!")
 #->Display the results
 burnin = 200
 BFDict = lf.get_BestFit(burnin)
-print("Type: {0}".format(lnlikeType))
-print("Slope: {m[0]:.3f} ({m[2]:.3f}, {m[1]:.3f})".format(m=BFDict["slope"]))
-print("Intercept: {b[0]:.3f} ({b[2]:.3f}, {b[1]:.3f})".format(b=BFDict["intercept"]))
-print("Intrinsic scatter: {s[0]:.3f} ({s[2]:.3f}, {s[1]:.3f})".format(s=BFDict["IntSc"]))
-print "Lnprob_max: {0:.3f}".format(lf.get_BFProb(burnin))
+print(("Type: {0}".format(lnlikeType)))
+print(("Slope: {m[0]:.3f} ({m[2]:.3f}, {m[1]:.3f})".format(m=BFDict["slope"])))
+print(("Intercept: {b[0]:.3f} ({b[2]:.3f}, {b[1]:.3f})".format(b=BFDict["intercept"])))
+print(("Intrinsic scatter: {s[0]:.3f} ({s[2]:.3f}, {s[1]:.3f})".format(s=BFDict["IntSc"])))
+print("Lnprob_max: {0:.3f}".format(lf.get_BFProb(burnin)))
 m = BFDict["slope"][0]
 b = BFDict["intercept"][0]
 yl = m * xl + b
@@ -58,11 +58,11 @@ print("Finish fitting!")
 #->Display the results
 burnin = 200
 BFDict = lf.get_BestFit(burnin)
-print("Type: {0}".format(lnlikeType))
-print("Slope: {m[0]:.3f} ({m[2]:.3f}, {m[1]:.3f})".format(m=BFDict["slope"]))
-print("Intercept: {b[0]:.3f} ({b[2]:.3f}, {b[1]:.3f})".format(b=BFDict["intercept"]))
-print("Intrinsic scatter: {s[0]:.3f} ({s[2]:.3f}, {s[1]:.3f})".format(s=BFDict["IntSc"]))
-print "Lnprob_max: {0:.3f}".format(lf.get_BFProb(burnin))
+print(("Type: {0}".format(lnlikeType)))
+print(("Slope: {m[0]:.3f} ({m[2]:.3f}, {m[1]:.3f})".format(m=BFDict["slope"])))
+print(("Intercept: {b[0]:.3f} ({b[2]:.3f}, {b[1]:.3f})".format(b=BFDict["intercept"])))
+print(("Intrinsic scatter: {s[0]:.3f} ({s[2]:.3f}, {s[1]:.3f})".format(s=BFDict["IntSc"])))
+print("Lnprob_max: {0:.3f}".format(lf.get_BFProb(burnin)))
 m = BFDict["slope"][0]
 b = BFDict["intercept"][0]
 yl = m * xl + b
@@ -80,11 +80,11 @@ print("Finish fitting!")
 #->Display the results
 burnin = 200
 BFDict = lf.get_BestFit(burnin)
-print("Type: {0}".format(lnlikeType))
-print("Slope: {m[0]:.3f} ({m[2]:.3f}, {m[1]:.3f})".format(m=BFDict["slope"]))
-print("Intercept: {b[0]:.3f} ({b[2]:.3f}, {b[1]:.3f})".format(b=BFDict["intercept"]))
-print("Intrinsic scatter: {s[0]:.3f} ({s[2]:.3f}, {s[1]:.3f})".format(s=BFDict["IntSc"]))
-print "Lnprob_max: {0:.3f}".format(lf.get_BFProb(burnin))
+print(("Type: {0}".format(lnlikeType)))
+print(("Slope: {m[0]:.3f} ({m[2]:.3f}, {m[1]:.3f})".format(m=BFDict["slope"])))
+print(("Intercept: {b[0]:.3f} ({b[2]:.3f}, {b[1]:.3f})".format(b=BFDict["intercept"])))
+print(("Intrinsic scatter: {s[0]:.3f} ({s[2]:.3f}, {s[1]:.3f})".format(s=BFDict["IntSc"])))
+print("Lnprob_max: {0:.3f}".format(lf.get_BFProb(burnin)))
 m = BFDict["slope"][0]
 b = BFDict["intercept"][0]
 yl = m * xl + b

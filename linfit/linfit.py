@@ -396,8 +396,7 @@ class LinFit(object):
             "Parameters": parNames,
             "samples": samples
         }
-        bfList = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
-                     zip(*np.percentile(samples, [16, 50, 84], axis=0)))
+        bfList = [(v[1], v[2]-v[1], v[1]-v[0]) for v in zip(*np.percentile(samples, [16, 50, 84], axis=0))]
         fmerge = lambda v: (v[0]-v[2], v[0], v[0]+v[1])
         fdiff  = lambda v: (v[1], v[2]-v[1], v[1]-v[0])
         for loop in range(ndim):

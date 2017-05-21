@@ -154,7 +154,7 @@ def lnlike_gcs(theta, x, y, xerr, yerr, fix_m=None, fix_b=None, *args, **kwargs)
     if not fix_b is None:
         parDict["b"] = fix_b
         nFix += 1
-    fixList = parDict.keys()
+    fixList = list(parDict.keys())
     nUse = 0
     if (lenPar + nFix) == 2:
         if "m" in fixList:
@@ -416,8 +416,8 @@ def lnprob(theta, x, y, xerr, yerr, pRanges, *args, **kwargs):
     -----
     None.
     """
-    print "args", args
-    print "kwargs", kwargs
+    print("args", args)
+    print("kwargs", kwargs)
     lp = lnprior(theta, pRanges)
     if not np.isfinite(lp):
         return -np.inf
@@ -435,5 +435,5 @@ if __name__ == "__main__":
     flag = data[:, 4]
     model = m_true * x + b_true
     sigma = np.sqrt(yerr**2 + (m_true * xerr)**2)
-    print ChiSq_0(y, model, sigma, flag)
-    print ChiSq_1(y, model, sigma, flag)
+    print(ChiSq_0(y, model, sigma, flag))
+    print(ChiSq_1(y, model, sigma, flag))
